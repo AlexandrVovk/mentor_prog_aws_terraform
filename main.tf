@@ -7,18 +7,22 @@ terraform {
   }
 
   required_version = ">= 0.14.9"
+  backend "s3" {
+    bucket = "xxxxxxxxxxx"
+    key    = "network/terraform.tfstate"
+    region = "eu-north-1"
+  }
 }
 
 provider "aws" {
   profile = "default"
-  # region  = "eu-central-1"
-  region = "eu-north-1"
+  region  = var.region
 }
 
 ############### Public
 
 resource "aws_vpc" "my_vpc" {
-  cidr_block       = "10.0.0.0/16"
+  cidr_block       = var.cidr
   instance_tenancy = "default"
 
   tags = {
@@ -36,7 +40,7 @@ resource "aws_internet_gateway" "gw" {
 
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.my_vpc.id
-  cidr_block              = "10.0.1.0/24"
+  cidr_block              = var.cidr_block_public
   map_public_ip_on_launch = "true"
 
   tags = {
@@ -105,7 +109,7 @@ data "aws_ami" "ami" {
   }
 }
 
-resource "aws_instance" "app_server" {
+resource "aws_instance" "public_ec2" {
   ami                    = data.aws_ami.ami.id
   instance_type          = "t3.micro"
   key_name               = "mac-key"
@@ -117,7 +121,8 @@ resource "aws_instance" "app_server" {
   }
 }
 
-######################## Privat
+
+###################### Privat
 
 
 resource "aws_eip" "eip" {
@@ -135,7 +140,7 @@ resource "aws_nat_gateway" "nat" {
 
 resource "aws_subnet" "privat" {
   vpc_id     = aws_vpc.my_vpc.id
-  cidr_block = "10.0.2.0/24"
+  cidr_block = var.cidr_block_privat
 
   tags = {
     Name = "Public Subnet"
